@@ -13,7 +13,7 @@ public class GamePanel extends JPanel implements ActionListener {
     static final int SCREEN_HEIGHT = 640;
     static final int UNIT_SIZE = 20;
     static final int GAME_UNITS = (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
-    static final int DELAY = 120;
+    static final int DELAY = 10;
     int[] x = new int[GAME_UNITS];
     int[] y = new int[GAME_UNITS];
     int bodyParts = 6;
@@ -322,12 +322,57 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         }
 
-        // If there are valid moves, randomly select one
-        if (!validMoves.isEmpty()) {
-            Random random = new Random();
-            return validMoves.get(random.nextInt(validMoves.size()));
-        } else {
-            return direction;
+        return increaseChancesOfAValidMove(validMoves);
+
+    }
+
+    private char increaseChancesOfAValidMove(ArrayList<Character> validMoves) {
+        int maxCount = Integer.MAX_VALUE;
+        char bestMove = direction;
+
+        for (char move : validMoves) {
+            int count = 0;
+            int headX = x[0];
+            int headY = y[0];
+
+            switch (move) {
+                case 'U':
+                    for (int i = 1; i < bodyParts; i++) {
+                        if (x[i] == headX && y[i] < headY) {
+                            count++;
+                        }
+                    }
+
+                    break;
+                case 'D':
+                    for (int i = 1; i < bodyParts; i++) {
+                        if (x[i] == headX && y[i] > headY) {
+                            count++;
+                        }
+                    }
+                    break;
+                case 'L':
+                    for (int i = 1; i < bodyParts; i++) {
+                        if (y[i] == headY && x[i] < headX) {
+                            count++;
+                        }
+                    }
+                    break;
+                case 'R':
+                    for (int i = 1; i < bodyParts; i++) {
+                        if (y[i] == headY && x[i] > headX) {
+                            count++;
+                        }
+                    }
+                    break;
+            }
+
+            if (count < maxCount) {
+                maxCount = count;
+                bestMove = move;
+            }
         }
+
+        return bestMove;
     }
 }
