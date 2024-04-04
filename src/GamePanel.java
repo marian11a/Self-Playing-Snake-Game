@@ -13,7 +13,7 @@ public class GamePanel extends JPanel implements ActionListener {
     static final int SCREEN_HEIGHT = 640;
     static final int UNIT_SIZE = 20;
     static final int GAME_UNITS = (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
-    static final int DELAY = 100;
+    static final int DELAY = 15;
     int[] x = new int[GAME_UNITS];
     int[] y = new int[GAME_UNITS];
     int bodyParts = 6;
@@ -323,15 +323,14 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         return increaseChancesOfAValidMove(validMoves);
-
     }
+
 
     private char increaseChancesOfAValidMove(ArrayList<Character> validMoves) {
         int maxCount = Integer.MAX_VALUE;
         char bestMove = direction;
         int headX = x[0];
         int headY = y[0];
-        String str = "";
 
         if (validMoves.size() > 1) {
             removeValidMoveIfItGoesToADeadEndCorner(validMoves, headX, headY);
@@ -381,7 +380,7 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void removeValidMoveIfItGoesToADeadEndCorner(ArrayList<Character> validMoves, int headX, int headY) {
-        if (headX == UNIT_SIZE || headX == SCREEN_WIDTH - UNIT_SIZE * 2||
+        if (headX == UNIT_SIZE || headX == SCREEN_WIDTH - UNIT_SIZE * 2 ||
                 headY == UNIT_SIZE * 3 || headY == SCREEN_HEIGHT - UNIT_SIZE * 2) {
 
             boolean top = false;
@@ -389,105 +388,40 @@ public class GamePanel extends JPanel implements ActionListener {
             boolean left = false;
             boolean right = false;
 
-            if (headX == UNIT_SIZE) {
-
-                for (Character move : validMoves) {
-                    switch (move) {
-                        case 'U':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (y[i] == UNIT_SIZE * 3) {
-                                    top = true;
-                                    break;
-                                }
+            for (Character move : validMoves) {
+                switch (move) {
+                    case 'U':
+                        for (int i = 1; i < bodyParts; i++) {
+                            if (y[i] == UNIT_SIZE * 3) {
+                                top = true;
+                                break;
                             }
-                            break;
-                        case 'D':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (y[i] == SCREEN_HEIGHT - UNIT_SIZE * 2) {
-                                    bottom = true;
-                                    break;
-                                }
+                        }
+                        break;
+                    case 'D':
+                        for (int i = 1; i < bodyParts; i++) {
+                            if (y[i] == SCREEN_HEIGHT - UNIT_SIZE * 2) {
+                                bottom = true;
+                                break;
                             }
-                            break;
-                        default:
-                            System.out.println("error left border");
-                            break;
-                    }
-                }
-            } else if (headX == SCREEN_WIDTH - UNIT_SIZE * 2) {
-
-                for (Character move : validMoves) {
-                    switch (move) {
-                        case 'U':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (y[i] == UNIT_SIZE * 3) {
-                                    top = true;
-                                    break;
-                                }
+                        }
+                        break;
+                    case 'L':
+                        for (int i = 1; i < bodyParts; i++) {
+                            if (x[i] == UNIT_SIZE) {
+                                left = true;
+                                break;
                             }
-                            break;
-                        case 'D':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (y[i] == SCREEN_HEIGHT - UNIT_SIZE * 2) {
-                                    bottom = true;
-                                    break;
-                                }
+                        }
+                        break;
+                    case 'R':
+                        for (int i = 1; i < bodyParts; i++) {
+                            if (x[i] == SCREEN_WIDTH - UNIT_SIZE * 2) {
+                                right = true;
+                                break;
                             }
-                            break;
-                        default:
-                            System.out.println("error right border");
-                            break;
-                    }
-                }
-            } else if (headY == UNIT_SIZE * 3) {
-
-                for (Character move : validMoves) {
-                    switch (move) {
-                        case 'L':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (x[i] == UNIT_SIZE) {
-                                    left = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        case 'R':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (x[i] == SCREEN_WIDTH - UNIT_SIZE * 2) {
-                                    right = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        default:
-                            System.out.println("error top border");
-                            break;
-                    }
-                }
-            } else {
-
-                for (Character move : validMoves) {
-                    switch (move) {
-                        case 'L':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (x[i] == UNIT_SIZE) {
-                                    left = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        case 'R':
-                            for (int i = 1; i < bodyParts; i++) {
-                                if (x[i] == SCREEN_WIDTH - UNIT_SIZE * 2) {
-                                    right = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        default:
-                            System.out.println("error bottom border");
-                            break;
-                    }
+                        }
+                        break;
                 }
             }
 
@@ -502,7 +436,6 @@ public class GamePanel extends JPanel implements ActionListener {
                     validMoves.remove(Character.valueOf('R'));
                 }
             }
-
         }
     }
 }
