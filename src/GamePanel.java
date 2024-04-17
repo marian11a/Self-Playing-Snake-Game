@@ -13,7 +13,7 @@ public class GamePanel extends JPanel implements ActionListener {
     static final int SCREEN_HEIGHT = 640;
     static final int UNIT_SIZE = 20;
     static final int GAME_UNITS = (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
-    static final int DELAY = 100;
+    static final int DELAY = 10;
     int[] x = new int[GAME_UNITS];
     int[] y = new int[GAME_UNITS];
     int bodyParts = 6;
@@ -24,6 +24,8 @@ public class GamePanel extends JPanel implements ActionListener {
     boolean running = false;
     Timer timer;
     Random random;
+
+    private int counterV;
 
     GamePanel() {
         random = new Random();
@@ -123,8 +125,7 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         }
     }
-
-
+    
     public void checkApple() {
         if ((x[0] == appleX) && (y[0] == appleY)) {
             bodyParts++;
@@ -279,23 +280,154 @@ public class GamePanel extends JPanel implements ActionListener {
             case 'R' -> nextHeadX += UNIT_SIZE;
         }
 
+        ArrayList<Character> validMoves = getValidMoves(headX, headY);
+
         // Check if the next move leads to a collision with the body
         for (int i = 1; i < bodyParts; i++) {
             if (nextHeadX == x[i] && nextHeadY == y[i]) {
-                return getRandomValidMove(headX, headY);
+                return findAllFreeNodes(validMoves);
             }
         }
 
         // Check if the next move leads to a collision with the walls
         if (nextHeadX < UNIT_SIZE || nextHeadX >= SCREEN_WIDTH - UNIT_SIZE ||
                 nextHeadY < UNIT_SIZE * 3 || nextHeadY >= SCREEN_HEIGHT - UNIT_SIZE) {
-            return getRandomValidMove(headX, headY);
+            return findAllFreeNodes(validMoves);
+        }
+
+        int freeNodesCounter = countAllFreeNodes(validMoves);
+        if (freeNodesCounter != validMoves.size()) {
+            return findAllFreeNodes(validMoves);
         }
 
         return nextMove;
     }
 
-    private char getRandomValidMove(int headX, int headY) {
+    private char findAllFreeNodes(ArrayList<Character> validMoves) {
+        char bestMove = direction;
+        int maxCount = 0;
+        for (char move : validMoves) {
+            char[][] grid = convertToGrid();
+            int[] headPosition = findHeadPosition(grid);
+
+            int headRow = headPosition[0];
+            int headCol = headPosition[1];
+            grid[headRow][headCol] = 'B';
+
+            switch (move) {
+                case 'U' -> grid[--headRow][headCol] = 'H';
+                case 'D' -> grid[++headRow][headCol] = 'H';
+                case 'L' -> grid[headRow][--headCol] = 'H';
+                case 'R' -> grid[headRow][++headCol] = 'H';
+            }
+
+            boolean isTrue = true;
+            makeVForEachSideWithFreeNode(grid, headRow, headCol);
+            fillEachDirectionWithV(grid, isTrue);
+            int currentCount = countV(grid);
+
+            if (currentCount >= maxCount && currentCount != 0) {
+                maxCount = currentCount;
+                bestMove = move;
+            }
+        }
+
+        return bestMove;
+    }
+
+    private int countAllFreeNodes(ArrayList<Character> validMoves) {
+        int equalCounter = 1;
+        int maxCount = Integer.MIN_VALUE;
+        for (char move : validMoves) {
+            char[][] grid = convertToGrid();
+            int[] headPosition = findHeadPosition(grid);
+
+            int headRow = headPosition[0];
+            int headCol = headPosition[1];
+            grid[headRow][headCol] = 'B';
+
+            switch (move) {
+                case 'U' -> grid[--headRow][headCol] = 'H';
+                case 'D' -> grid[++headRow][headCol] = 'H';
+                case 'L' -> grid[headRow][--headCol] = 'H';
+                case 'R' -> grid[headRow][++headCol] = 'H';
+            }
+
+            boolean isTrue = true;
+            makeVForEachSideWithFreeNode(grid, headRow, headCol);
+            fillEachDirectionWithV(grid, isTrue);
+            int currentCount = countV(grid);
+
+            if (currentCount >= maxCount) {
+                if (currentCount == maxCount) {
+                    equalCounter++;
+                }
+                maxCount = currentCount;
+            }
+        }
+
+        return equalCounter;
+    }
+
+    private int countV(char[][] grid) {
+        int counter = 0;
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[0].length; col++) {
+                if (grid[row][col] == 'V') {
+                    counter++;
+                }
+            }
+        }
+        return counter;
+    }
+
+    private void makeVForEachSideWithFreeNode(char[][] grid, int headRow, int headCol) {
+        if (grid[headRow - 1][headCol] == '*') {
+            grid[headRow - 1][headCol] = 'V';
+            counterV++;
+        }
+        if (grid[headRow + 1][headCol] == '*') {
+            grid[headRow + 1][headCol] = 'V';
+            counterV++;
+        }
+        if (grid[headRow][headCol - 1] == '*') {
+            grid[headRow][headCol - 1] = 'V';
+            counterV++;
+        }
+        if (grid[headRow][headCol + 1] == '*') {
+            grid[headRow][headCol + 1] = 'V';
+            counterV++;
+        }
+    }
+
+    private void fillEachDirectionWithV(char[][] grid, boolean isTrue) {
+        while (isTrue) {
+            counterV = 0;
+            for (int row = 0; row < grid.length; row++) {
+                for (int col = 0; col < grid[0].length; col++) {
+                    if (grid[row][col] == 'V') {
+                        makeVForEachSideWithFreeNode(grid, row, col);
+                    }
+                }
+            }
+
+            if (counterV == 0) {
+                isTrue = false;
+            }
+        }
+    }
+
+    private int[] findHeadPosition(char[][] grid) {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[0].length; col++) {
+                if (grid[row][col] == 'H') {
+                    return new int[]{row, col};
+                }
+            }
+        }
+        return new int[]{-1, -1};
+    }
+    private ArrayList<Character> getValidMoves(int headX, int headY) {
         char[] possibleMoves = {'U', 'D', 'L', 'R'};
         ArrayList<Character> validMoves = new ArrayList<>();
         for (char move : possibleMoves) {
@@ -308,7 +440,6 @@ public class GamePanel extends JPanel implements ActionListener {
                 case 'R' -> testHeadX += UNIT_SIZE;
             }
 
-            // Check if this move is valid (not leading to a collision)
             boolean valid = true;
             for (int j = 1; j < bodyParts; j++) {
                 if (testHeadX == x[j] && testHeadY == y[j]) {
@@ -322,120 +453,37 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         }
 
-        return increaseChancesOfAValidMove(validMoves);
+        return validMoves;
     }
 
+    private char[][] convertToGrid() {
+        char[][] grid = new char[SCREEN_HEIGHT / UNIT_SIZE][SCREEN_WIDTH / UNIT_SIZE];
 
-    private char increaseChancesOfAValidMove(ArrayList<Character> validMoves) {
-        int maxCount = Integer.MAX_VALUE;
-        char bestMove = direction;
-        int headX = x[0];
-        int headY = y[0];
-
-        if (validMoves.size() > 1) {
-            removeValidMoveIfItGoesToADeadEndCorner(validMoves, headX, headY);
-        }
-
-        for (char move : validMoves) {
-            int count = 0;
-
-            switch (move) {
-                case 'U':
-                    for (int i = 1; i < bodyParts; i++) {
-                        if (y[i] < headY) {
-                            count++;
-                        }
-                    }
-                    break;
-                case 'D':
-                    for (int i = 1; i < bodyParts; i++) {
-                        if (y[i] > headY) {
-                            count++;
-                        }
-                    }
-                    break;
-                case 'L':
-                    for (int i = 1; i < bodyParts; i++) {
-                        if (x[i] < headX) {
-                            count++;
-                        }
-                    }
-                    break;
-                case 'R':
-                    for (int i = 1; i < bodyParts; i++) {
-                        if (x[i] > headX) {
-                            count++;
-                        }
-                    }
-                    break;
-            }
-
-            if (count <= maxCount) {
-                maxCount = count;
-                bestMove = move;
+        for (int i = 0; i < grid.length; i++) {
+            for (int j = 0; j < grid[0].length; j++) {
+                grid[i][j] = '*';
             }
         }
 
-        return bestMove;
-    }
-
-    private void removeValidMoveIfItGoesToADeadEndCorner(ArrayList<Character> validMoves, int headX, int headY) {
-        if (headX == UNIT_SIZE || headX == SCREEN_WIDTH - UNIT_SIZE * 2 ||
-                headY == UNIT_SIZE * 3 || headY == SCREEN_HEIGHT - UNIT_SIZE * 2) {
-
-            boolean top = false;
-            boolean bottom = false;
-            boolean left = false;
-            boolean right = false;
-
-            for (Character move : validMoves) {
-                switch (move) {
-                    case 'U':
-                        for (int i = 1; i < bodyParts; i++) {
-                            if (y[i] == UNIT_SIZE * 3) {
-                                top = true;
-                                break;
-                            }
-                        }
-                        break;
-                    case 'D':
-                        for (int i = 1; i < bodyParts; i++) {
-                            if (y[i] == SCREEN_HEIGHT - UNIT_SIZE * 2) {
-                                bottom = true;
-                                break;
-                            }
-                        }
-                        break;
-                    case 'L':
-                        for (int i = 1; i < bodyParts; i++) {
-                            if (x[i] == UNIT_SIZE) {
-                                left = true;
-                                break;
-                            }
-                        }
-                        break;
-                    case 'R':
-                        for (int i = 1; i < bodyParts; i++) {
-                            if (x[i] == SCREEN_WIDTH - UNIT_SIZE * 2) {
-                                right = true;
-                                break;
-                            }
-                        }
-                        break;
-                }
-            }
-
-            if (top || bottom || left || right) {
-                if (top) {
-                    validMoves.remove(Character.valueOf('U'));
-                } else if (bottom) {
-                    validMoves.remove(Character.valueOf('D'));
-                } else if (left) {
-                    validMoves.remove(Character.valueOf('L'));
-                } else {
-                    validMoves.remove(Character.valueOf('R'));
-                }
+        for (int i = 0; i < bodyParts - 1; i++) {
+            if (i == 0) {
+                grid[y[i] / UNIT_SIZE][x[i] / UNIT_SIZE] = 'H';
+            } else {
+                grid[y[i] / UNIT_SIZE][x[i] / UNIT_SIZE] = 'B';
             }
         }
+
+        grid[appleY / UNIT_SIZE][appleX / UNIT_SIZE] = 'A';
+
+        for (int i = 2; i < grid.length; i++) {
+            grid[i][0] = 'B';
+            grid[i][grid[0].length - 1] = 'B';
+        }
+        for (int j = 0; j < grid[0].length; j++) {
+            grid[2][j] = 'B';
+            grid[grid.length - 1][j] = 'B';
+        }
+
+        return grid;
     }
 }
