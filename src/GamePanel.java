@@ -1,4 +1,5 @@
-import javax.swing.*;
+import
+        javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -24,7 +25,6 @@ public class GamePanel extends JPanel implements ActionListener {
     boolean running = false;
     Timer timer;
     Random random;
-
     private int counterV;
 
     GamePanel() {
@@ -263,24 +263,43 @@ public class GamePanel extends JPanel implements ActionListener {
         int distX = appleX - headX;
         int distY = appleY - headY;
 
+        int nextHeadX = headX;
+        int nextHeadY = headY;
+        ArrayList<Character> validMoves = getValidMoves(headX, headY);
+
+        int freeNodesCounter = countAllFreeNodes(validMoves);
+        if (freeNodesCounter != validMoves.size()) {
+            return findAllFreeNodes(validMoves);
+        }
+
+        boolean touchesTwoBorders = checkIfSnakeTouchesTwoBorders();
+        boolean headReachesApple = canHeadReachApple(validMoves);
         char nextMove;
-        if (Math.abs(distX) > Math.abs(distY)) {
-            nextMove = distX > 0 ? 'R' : 'L';
+        boolean horizontalPriority  = Math.abs(distX) > Math.abs(distY);
+
+        // Don't go towards the apple
+        if (touchesTwoBorders && !headReachesApple) {
+            if (horizontalPriority ) {
+                nextMove = distX > 0 ? 'L' : 'R';
+            } else {
+                nextMove = distY > 0 ? 'U' : 'D';
+            }
+        // Go towards the apple
         } else {
-            nextMove = distY > 0 ? 'D' : 'U';
+            if (horizontalPriority ) {
+                nextMove = distX > 0 ? 'R' : 'L';
+            } else {
+                nextMove = distY > 0 ? 'D' : 'U';
+            }
         }
 
         // Simulate the next move
-        int nextHeadX = headX;
-        int nextHeadY = headY;
         switch (nextMove) {
             case 'U' -> nextHeadY -= UNIT_SIZE;
             case 'D' -> nextHeadY += UNIT_SIZE;
             case 'L' -> nextHeadX -= UNIT_SIZE;
             case 'R' -> nextHeadX += UNIT_SIZE;
         }
-
-        ArrayList<Character> validMoves = getValidMoves(headX, headY);
 
         // Check if the next move leads to a collision with the body
         for (int i = 1; i < bodyParts; i++) {
@@ -292,11 +311,6 @@ public class GamePanel extends JPanel implements ActionListener {
         // Check if the next move leads to a collision with the walls
         if (nextHeadX < UNIT_SIZE || nextHeadX >= SCREEN_WIDTH - UNIT_SIZE ||
                 nextHeadY < UNIT_SIZE * 3 || nextHeadY >= SCREEN_HEIGHT - UNIT_SIZE) {
-            return findAllFreeNodes(validMoves);
-        }
-
-        int freeNodesCounter = countAllFreeNodes(validMoves);
-        if (freeNodesCounter != validMoves.size()) {
             return findAllFreeNodes(validMoves);
         }
 
@@ -344,8 +358,8 @@ public class GamePanel extends JPanel implements ActionListener {
 
             int headRow = headPosition[0];
             int headCol = headPosition[1];
-            grid[headRow][headCol] = 'B';
 
+            grid[headRow][headCol] = 'B';
             switch (move) {
                 case 'U' -> grid[--headRow][headCol] = 'H';
                 case 'D' -> grid[++headRow][headCol] = 'H';
@@ -367,6 +381,48 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         return equalCounter;
+    }
+
+    private boolean canHeadReachApple(ArrayList<Character> validMoves) {
+        int maxCount = Integer.MIN_VALUE;
+        for (char move : validMoves) {
+            char[][] grid = convertToGrid();
+            int[] headPosition = findHeadPosition(grid);
+
+            int headRow = headPosition[0];
+            int headCol = headPosition[1];
+
+            grid[headRow][headCol] = 'B';
+            switch (move) {
+                case 'U' -> grid[--headRow][headCol] = 'H';
+                case 'D' -> grid[++headRow][headCol] = 'H';
+                case 'L' -> grid[headRow][--headCol] = 'H';
+                case 'R' -> grid[headRow][++headCol] = 'H';
+            }
+
+            boolean isTrue = true;
+            makeVForEachSideWithFreeNode(grid, headRow, headCol);
+            fillEachDirectionWithV(grid, isTrue);
+
+            int[] applePosition = findApplePosition(grid);
+            int appleRow = applePosition[0];
+            int appleCol = applePosition[1];
+
+            if (grid[appleRow - 1][appleCol] == 'V') {
+                return true;
+            }
+            if (grid[appleRow + 1][appleCol] == 'V') {
+                return true;
+            }
+            if (grid[appleRow][appleCol - 1] == 'V') {
+                return true;
+            }
+            if (grid[appleRow][appleCol + 1] == 'V') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private int countV(char[][] grid) {
@@ -417,45 +473,6 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    private int[] findHeadPosition(char[][] grid) {
-        for (int row = 0; row < grid.length; row++) {
-            for (int col = 0; col < grid[0].length; col++) {
-                if (grid[row][col] == 'H') {
-                    return new int[]{row, col};
-                }
-            }
-        }
-        return new int[]{-1, -1};
-    }
-    private ArrayList<Character> getValidMoves(int headX, int headY) {
-        char[] possibleMoves = {'U', 'D', 'L', 'R'};
-        ArrayList<Character> validMoves = new ArrayList<>();
-        for (char move : possibleMoves) {
-            int testHeadX = headX;
-            int testHeadY = headY;
-            switch (move) {
-                case 'U' -> testHeadY -= UNIT_SIZE;
-                case 'D' -> testHeadY += UNIT_SIZE;
-                case 'L' -> testHeadX -= UNIT_SIZE;
-                case 'R' -> testHeadX += UNIT_SIZE;
-            }
-
-            boolean valid = true;
-            for (int j = 1; j < bodyParts; j++) {
-                if (testHeadX == x[j] && testHeadY == y[j]) {
-                    valid = false;
-                    break;
-                }
-            }
-            if (valid && testHeadX >= UNIT_SIZE && testHeadX < SCREEN_WIDTH - UNIT_SIZE &&
-                    testHeadY >= UNIT_SIZE * 3 && testHeadY < SCREEN_HEIGHT - UNIT_SIZE) {
-                validMoves.add(move);
-            }
-        }
-
-        return validMoves;
-    }
-
     private char[][] convertToGrid() {
         char[][] grid = new char[SCREEN_HEIGHT / UNIT_SIZE][SCREEN_WIDTH / UNIT_SIZE];
 
@@ -485,5 +502,80 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         return grid;
+    }
+
+    private ArrayList<Character> getValidMoves(int headX, int headY) {
+        char[] possibleMoves = {'U', 'D', 'L', 'R'};
+        ArrayList<Character> validMoves = new ArrayList<>();
+        for (char move : possibleMoves) {
+            int testHeadX = headX;
+            int testHeadY = headY;
+            switch (move) {
+                case 'U' -> testHeadY -= UNIT_SIZE;
+                case 'D' -> testHeadY += UNIT_SIZE;
+                case 'L' -> testHeadX -= UNIT_SIZE;
+                case 'R' -> testHeadX += UNIT_SIZE;
+            }
+
+            boolean valid = true;
+            for (int j = 1; j < bodyParts; j++) {
+                if (testHeadX == x[j] && testHeadY == y[j]) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid && testHeadX >= UNIT_SIZE && testHeadX < SCREEN_WIDTH - UNIT_SIZE &&
+                    testHeadY >= UNIT_SIZE * 3 && testHeadY < SCREEN_HEIGHT - UNIT_SIZE) {
+                validMoves.add(move);
+            }
+        }
+
+        return validMoves;
+    }
+
+    public boolean checkIfSnakeTouchesTwoBorders() {
+        boolean touchesLeftBorder = false;
+        boolean touchesTopBorder = false;
+        boolean touchesBottomBorder = false;
+        boolean touchesRightBorder = false;
+
+        for (int i = 0; i < bodyParts; i++) {
+            if (x[i] <= UNIT_SIZE) {
+                touchesLeftBorder = true;
+            }
+            if (x[i] >= SCREEN_WIDTH - UNIT_SIZE * 2) {
+                touchesRightBorder = true;
+            }
+            if (y[i] <= UNIT_SIZE * 3) {
+                touchesTopBorder = true;
+            }
+            if (y[i] >= SCREEN_HEIGHT - UNIT_SIZE * 2) {
+                touchesBottomBorder = true;
+            }
+        }
+
+        return touchesLeftBorder && touchesRightBorder || touchesBottomBorder && touchesTopBorder;
+    }
+
+    private int[] findHeadPosition(char[][] grid) {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[0].length; col++) {
+                if (grid[row][col] == 'H') {
+                    return new int[]{row, col};
+                }
+            }
+        }
+        return new int[]{y[0] / UNIT_SIZE, x[0] / UNIT_SIZE};
+    }
+
+    private int[] findApplePosition(char[][] grid) {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[0].length; col++) {
+                if (grid[row][col] == 'A') {
+                    return new int[]{row, col};
+                }
+            }
+        }
+        return new int[]{appleY / UNIT_SIZE, appleX / UNIT_SIZE};
     }
 }
