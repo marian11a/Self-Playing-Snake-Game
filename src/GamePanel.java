@@ -384,7 +384,6 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private boolean canHeadReachApple(ArrayList<Character> validMoves) {
-        int maxCount = Integer.MIN_VALUE;
         for (char move : validMoves) {
             char[][] grid = convertToGrid();
             int[] headPosition = findHeadPosition(grid);
